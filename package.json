@@ -1,0 +1,19 @@
+{
+  "name": "spot_node",
+  "version": "1.0.0",
+  "description": "spot project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ahmad",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql2": "^3.14.0",
+    "nodemailer": "^6.10.0",
+    "sequelize": "^6.37.7"
+  }
+}
