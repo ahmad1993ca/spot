@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const nodemailer = require("nodemailer");
+const axios = require('axios');
 const {
   sendMail,
   generateOTP,
@@ -50,11 +51,47 @@ exports.sendOtp = async (req, res) => {
 
       req.session.email = email;
     } else {
-     const result =  await sendOTPviaSMS(mobile, otp);
+    //  const result =  await sendOTPviaSMS(mobile, otp);
+    // Replace with your actual values
+      const AUTH_KEY = '343074686573706f743132333130301744818964';
+      const SENDER_ID = 'ARHAMF'; // Must be exactly 6 characters
+      const ROUTE = 1;
 
-     console.log('result', result)
-      req.session.mobile = mobile;
+    const { mobile, } = req.body;
+
+  if (!mobile ) {
+    return res.status(400).json({ error: 'Mobile number and message are required' });
+  }
+
+  // Handle single quotes by doubling them up as per guideline
+  // const formattedMessage = message.replace(/'/g, "''");
+  const message = encodeURIComponent(`Your OTP code is ${otp}. Please use it within 10 minutes.`);
+
+  try {
+    const smsURL = 'http://bulk.powerstext.in/http-tokenkeyapi.php';
+
+    const params = {
+      'authentic-key': '343074686573706f743132333130301744818964',
+      senderid: 'ARHAMF', // Replace with your approved 6-char sender ID
+      route: 1,
+      number: '7898691085', // Replace with recipient number
+      message: 'Your OTP code is 927388. Please use it within 10 minutes.', // Message must match template
+      templateid: '1607100000000340864' // Replace with your approved template ID
+    };
+  
+    try {
+      const response = await axios.get(smsURL, { params });
+      console.log('SMS API Response:', response);
+    } catch (error) {
+      console.error('SMS API Error:', error.message);
     }
+      //  console.log('result', result)
+      req.session.mobile = mobile;
+    }catch (error) {
+      console.error('SMS API Error:', error.message);
+    }
+  }
+  
 
     req.session.otp = otp;
     req.session.otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
@@ -106,7 +143,7 @@ exports.verifyOtp = async (req, res) => {
 
 exports.register = async (req, res) => {
   try {
-    const { mobile, email, password, confirm_password } = req.body;
+    const { email, password, confirm_password } = req.body;
 
 
     // Check if user already exists
@@ -147,22 +184,14 @@ exports.register = async (req, res) => {
         password: hashedPassword,
         confirm_password: hashedPassword,
       });
-    } else {
-      newUser = await db.User.create({
-        mobile,
-        password: hashedPassword,
-        confirm_password: hashedPassword,
-      });
-    }
-
+    } 
 
     res.status(201).json({
       status: true,
       message: "User registered successfully",
       user: {
         id: newUser.id,
-        email: newUser.email,
-        mobile: newUser.mobile
+        email: newUser.email
       },
     });
   } catch (error) {

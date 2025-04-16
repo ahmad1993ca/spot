@@ -46,6 +46,9 @@ const generateOTP = () => {
 //   }
 // };
 
+
+
+
 const sendOTPviaSMS = async (mobileNumber, otp) => {
   try {
     // Clean the number (just in case)
