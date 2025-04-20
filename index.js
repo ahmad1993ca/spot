@@ -30,7 +30,6 @@ app.use(passport.session());
 app.use("/api/users", userRoutes);
 
 
-
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
@@ -44,7 +43,7 @@ app.get('/auth/google/callback',
       email: req.user.emails?.[0].value,
       photo: req.user.photos?.[0].value
     };
-
+   //store in db 
     const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     // Send token in JSON response instead of redirecting to a page

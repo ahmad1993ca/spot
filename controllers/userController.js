@@ -1,7 +1,11 @@
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const nodemailer = require("nodemailer");
+const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const express = require('express');
+const router = express.Router();
+
 const {
   sendMail,
   generateOTP,
@@ -15,10 +19,10 @@ exports.sendOtp = async (req, res) => {
 
     console.log("email", email, mobile)
 
-    if (!email && !mobile) {
+    if (!email) {
       return res.status(400).json({
         status: false,
-        message: "please provide email or mobile number"
+        message: "please provide email "
       })
     }
 
@@ -71,11 +75,11 @@ exports.sendOtp = async (req, res) => {
     const smsURL = 'http://bulk.powerstext.in/http-tokenkeyapi.php';
 
     const params = {
-      'authentic-key': '343074686573706f743132333130301744818964',
-      senderid: 'ARHAMF', // Replace with your approved 6-char sender ID
+      'authentic-key': AUTH_KEY,
+      senderid: SENDER_ID, // Replace with your approved 6-char sender ID
       route: 1,
-      number: '7898691085', // Replace with recipient number
-      message: 'Your OTP code is 927388. Please use it within 10 minutes.', // Message must match template
+      number: mobile, // Replace with recipient number
+      message: `Your OTP code is ${otp}. Please use it within 10 minutes.`, // Message must match template
       templateid: '1607100000000340864' // Replace with your approved template ID
     };
   
@@ -148,7 +152,7 @@ exports.register = async (req, res) => {
 
     // Check if user already exists
 
-    const existingUser = null
+    let existingUser;
 
     if (email) {
       existingUser = await db.User.findOne({ where: { email } });
@@ -176,7 +180,7 @@ exports.register = async (req, res) => {
 
     // Create user with only required fields
 
-    const newUser = null;
+    let newUser ;
 
     if (email) {
       newUser = await db.User.create({
@@ -195,6 +199,7 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log(error)
     res.status(500).json({
       status: false,
       message: error.message,
@@ -203,30 +208,71 @@ exports.register = async (req, res) => {
 };
 
 
+exports.profile = async (req, res) => {
+  try {
+    const { email, first_name, last_name, gender, about_you, profile_visibility } = req.body;
+
+    const imageUrl = req.file ? `uploads/${req.file.filename}` : null;
+
+    const profile = await db.Profile.create({
+      email,
+      first_name,
+      last_name,
+      gender,
+      about_you,
+      profile_visibility,
+      image_url: imageUrl
+    });
+
+    res.status(201).json({ message: 'Profile created successfully', profile });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong', error: err.message });
+  }
+};
+
+
+// Replace with your actual secret (store securely in .env)
+const JWT_SECRET = process.env.JWT_SECRET || 'spot';
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await db.User.findOne({ where: { email } });
 
-    const matchPassword = await bcrypt.compare(password, user.password);
-
-    if (!user || !matchPassword) {
+    if (!user) {
       return res.status(401).json({
         status: false,
         message: "Invalid email or password",
       });
     }
 
+    const matchPassword = await bcrypt.compare(password, user.password);
+
+    if (!matchPassword) {
+      return res.status(401).json({
+        status: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Generate JWT Token
+    const token = jwt.sign(
+      { id: user.id, email: user.email }, // Payload
+      JWT_SECRET,
+      { expiresIn: '1d' } // Token validity
+    );
+
     res.status(200).json({
       status: true,
-      message: 'login successful',
+      message: 'Login successful',
+      token, // Include token in response
       user: {
         id: user.id,
         email: user.email,
-        mobile: user.mobile
       }
-    })
+    });
 
   } catch (error) {
     res.status(500).json({
@@ -234,5 +280,4 @@ exports.login = async (req, res) => {
       message: error.message,
     });
   }
-}
-
+};
